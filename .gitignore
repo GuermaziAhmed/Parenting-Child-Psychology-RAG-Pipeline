@@ -42,7 +42,7 @@ chroma_db/
 secrets.txt
 
 # PDF Files (optional - comment out if you want to commit PDFs)
-data/*.pdf
+data/
 
 # OS
 .DS_Store

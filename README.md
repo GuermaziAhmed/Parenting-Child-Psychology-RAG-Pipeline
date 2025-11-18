@@ -70,14 +70,32 @@ The notebook automatically installs:
 
 ## 📂 Project Structure
 
+Notebook-only (original):
 ```
 parenting-and-child/
 ├── parenting_rag_pipeline.ipynb  # Main notebook
-├── README.md                      # This file
-├── data/                          # PDF documents folder
-│   └── (add your PDF files here)
-└── chroma_db/                     # Vector database (auto-created)
+├── parenting_articles.csv        # Source CSV (sample dataset)
+├── chroma_db/                    # Vector database (auto-created)
+│   └── ...
+└── data/                        # PDF documents folder (optional user PDFs)
 ```
+
+New Python module version (scripted):
+```
+parenting-and-child/
+├── config.py                # Central configuration constants
+├── embeddings.py            # Embedding wrapper (SentenceTransformer)
+├── vectorstore_build.py     # Build or load Chroma collection from CSV
+├── rag.py                   # Retrieval + prompt assembly + LLM call
+├── llm.py                   # OpenRouter/OpenAI client with graceful fallback
+├── main.py                  # CLI entry point (end-to-end RAG)
+├── requirements.txt         # Python dependencies
+├── parenting_articles.csv   # Source data
+├── chroma_db/               # Persistent Chroma store
+└── data/                    # Optional PDF files
+```
+
+> You can now run everything outside the notebook using `main.py`.
 
 ## 🚀 Getting Started
 
@@ -103,7 +121,7 @@ Get your keys:
 - **OpenRouter**: https://openrouter.ai/keys (Free tier - no credit card!)
 - **Hugging Face** (optional): https://huggingface.co/settings/tokens
 
-### Step 3: Run the Notebook
+### Step 3: Run the Notebook (Option A)
 
 1. Open `parenting_rag_pipeline.ipynb` in VS Code or Jupyter
 2. Run all cells from top to bottom
@@ -114,7 +132,57 @@ Get your keys:
    - Build a vector database with all content
 4. Use the interactive query cell to ask questions!
 
-### Step 4: (Optional) Add Your Own PDFs
+### Step 4: Run as Python Scripts (Option B)
+
+Install dependencies (inside your environment):
+
+```powershell
+pip install -r requirements.txt
+```
+
+Force (re)build vector store and query:
+```powershell
+python main.py --rebuild -q "How can I deal with my child's tantrums?"
+```
+
+Subsequent queries reuse existing Chroma collection:
+```powershell
+python main.py -q "How do I encourage emotional regulation?" -k 5
+```
+
+If the LLM API key is missing or invalid the answer section will show a fallback message while retrieval still works (chunks + sources).
+
+Windows note (file lock / PermissionError):
+- If you see a PermissionError when deleting `chroma_db` (WinError 32), close any Jupyter kernels or Python processes using the DB.
+- Or direct the database to a fresh folder with `--db-dir`:
+```powershell
+python main.py --rebuild --db-dir "chroma_db2" -q "How can I deal with my child's tantrums?"
+```
+
+### Step 5: (Optional) Add Your Own PDFs
+
+## 📥 Scrape UNICEF & CDC parenting pages to text files
+
+You can automatically collect a small set of parenting documents from UNICEF and CDC and save each as a readable text file into `data/`:
+
+```powershell
+# Install dependencies (if not already)
+pip install -r requirements.txt
+
+# Scrape up to 30 pages, save up to 20 documents, 1 second between requests
+python scrape_sources.py --max-pages 30 --max-docs 20 --delay 1.0
+```
+
+What it does:
+- Starts from official parenting resource pages (UNICEF Parenting, CDC Parenting/Essentials).
+- Follows only domain-allowed links that look parenting-related.
+- If the link is a PDF, downloads directly as `.pdf`.
+- If the link is HTML, extracts the main text and saves as a plain `.txt` file (UTF-8 encoded, directly readable).
+
+Notes:
+- The script is intentionally conservative and polite (rate limited).
+- Text files include article titles and are human-readable in any text editor.
+- If websites block automated access, reduce `--max-pages` and increase `--delay` or retry later.
 
 You can supplement the web-scraped content with your own PDF documents:
 - Place PDF files in the `data/` folder
